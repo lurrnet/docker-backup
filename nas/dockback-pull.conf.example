@@ -8,6 +8,10 @@ SSH_KEY=/volume1/homes/backup/.ssh/id_ed25519
 REMOTE_ROOT=/home/ubuntu
 REMOTE_STAGING=/home/ubuntu/dockback-staging
 
+# Keep the newest N host-side staging snapshots per project.
+# Pruning happens only after a successful NAS pull (and successful restic run, if enabled).
+REMOTE_KEEP_STAGING=2
+
 # NAS destination
 LOCAL_ROOT=/volume1/backups/oci-docker
 
