@@ -5,7 +5,7 @@ import json
 import sys
 from pathlib import Path
 
-from .backup import prepare_backup, verify_backup
+from .backup import prepare_backup, prune_staging, verify_backup
 from .discovery import discover_compose_projects, plan_project
 
 
