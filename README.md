@@ -33,13 +33,13 @@ Host-side `dockback`:
 
 - scans a root directory for Compose projects;
 - asks Docker Compose for the resolved model using `docker compose config --format json`;
-- detects bind mounts and named volumes;
+- detects bind mounts and named volumes;\n- detects services built from local source with `build:` and backs up their build contexts;
 - detects PostgreSQL, MySQL and MariaDB services from their images;
 - uses logical database dumps instead of raw copies for recognized database data volumes;
 - creates consistent SQLite snapshots when SQLite databases are found inside bind mounts;
 - conservatively backs up unknown persistent mounts;
 - skips obvious cache/tmp/log mounts;
-- stores Compose files, `.env`, resolved Compose metadata, backup plan and a manifest;
+- stores Compose files, `.env`, resolved Compose metadata, backup plan and a manifest;\n- records Git remote/branch/commit/dirty state for build contexts when they are Git repositories;
 - verifies the basic backup structure after creation.
 
 NAS-side `pull-backup.sh`:
@@ -62,7 +62,7 @@ The default policy is intentionally conservative:
 | application/config/data bind | back up |
 | ordinary named volume | tar archive |
 | cache/tmp/log-like mount | skip |
-| unknown persistent mount | back up |
+| unknown persistent mount | back up |\n| local `build.context` source | back up source tree |
 
 Unknown data is backed up rather than silently ignored.
 
@@ -328,3 +328,34 @@ The most useful next additions are:
 4. dedicated restricted SSH pull account;
 5. more database adapters;
 6. backup result/status history and notifications.
+
+
+## Build-based applications
+
+If a Compose service uses a local build:
+
+```yaml
+services:
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+```
+
+`dockback inspect` records the resolved build context and Dockerfile, and a backup stores the build context under:
+
+```text
+source/<service-name>/
+```
+
+When the build context is a Git repository, `metadata/build.json` also records:
+
+- repository root;
+- `remote.origin.url`;
+- current branch;
+- current commit SHA;
+- whether the working tree is dirty.
+
+Source-copy exclusions use common generated-directory defaults such as `.git`, `node_modules`, `.venv`, `__pycache__`, `dist` and `build`, plus common patterns from the build context's `.dockerignore`.
+
+The current `.dockerignore` parser intentionally covers common ignore patterns but does not yet implement every Docker ignore edge case, especially negated `!pattern` rules.
