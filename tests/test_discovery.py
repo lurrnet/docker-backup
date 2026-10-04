@@ -59,3 +59,24 @@ def test_cache_mount_is_skipped():
     spec = classify_mount("app", mount, None)
     assert spec.category == "cache"
     assert spec.action == "skip"
+
+
+def test_build_context_is_detected(monkeypatch, tmp_path):
+    from dockback import discovery
+
+    config = {
+        "name": "demo",
+        "services": {
+            "app": {
+                "build": {"context": ".", "dockerfile": "Dockerfile"},
+                "volumes": [],
+            }
+        },
+    }
+
+    monkeypatch.setattr(discovery, "resolved_compose", lambda _: config)
+    plan = discovery.plan_project(tmp_path)
+    assert len(plan.builds) == 1
+    assert plan.builds[0].service == "app"
+    assert plan.builds[0].context == str(tmp_path.resolve())
+    assert plan.builds[0].dockerfile == "Dockerfile"
