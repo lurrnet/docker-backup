@@ -8,7 +8,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 from .discovery import resolved_compose
-from .models import DatabaseSpec, MountSpec, ProjectPlan
+from .models import DatabaseSpec, MountSpec, ProjectPlan\nfrom .source import copy_build_context, git_metadata, write_source_metadata
 
 
 def _run(cmd: list[str], *, cwd: Path | None = None, stdout=None) -> None:
@@ -166,6 +166,22 @@ def prepare_backup(plan: ProjectPlan, staging_root: Path) -> Path:
     with (metadata / "backup-plan.json").open("w", encoding="utf-8") as fh:
         json.dump(plan.public_dict(), fh, indent=2)
 
+    build_entries = []
+    for build in plan.builds:
+        context = Path(build.context).resolve()
+        source_dest = dest / "source" / build.service
+        if context.exists():
+            copy_build_context(context, source_dest)
+        entry = {
+            "service": build.service,
+            "context": str(context),
+            "dockerfile": build.dockerfile,
+            "git": git_metadata(context),
+        }
+        build_entries.append(entry)
+    if build_entries:
+        write_source_metadata(metadata, build_entries)
+
     for db in plan.databases:
         _dump_database(db, dest, project_dir)
 
@@ -186,6 +202,7 @@ def prepare_backup(plan: ProjectPlan, staging_root: Path) -> Path:
         "format_version": 1,
         "backup_root": str(dest),
         "sqlite_snapshots": sqlite_snapshots,
+        "build_sources": [b.service for b in plan.builds],
     }
     with (metadata / "manifest.json").open("w", encoding="utf-8") as fh:
         json.dump(manifest, fh, indent=2)
