@@ -6,7 +6,7 @@ import subprocess
 from pathlib import Path
 from typing import Any
 
-from .models import DatabaseSpec, MountSpec, ProjectPlan
+from .models import BuildSpec, DatabaseSpec, MountSpec, ProjectPlan
 
 COMPOSE_NAMES = (
     "compose.yaml", "compose.yml", "docker-compose.yaml", "docker-compose.yml"
@@ -156,17 +156,30 @@ def plan_project(project_dir: Path) -> ProjectPlan:
     databases: list[DatabaseSpec] = []
     service_db: dict[str, DatabaseSpec] = {}
     services: list[dict[str, Any]] = []
-    mounts: list[MountSpec] = []
+    mounts: list[MountSpec] = []\n    builds: list[BuildSpec] = []
 
     for name, service in services_cfg.items():
         db = detect_database(name, service)
         if db:
             databases.append(db)
             service_db[name] = db
+        build = service.get("build")
+        if isinstance(build, dict):
+            context = str(build.get("context") or ".")
+            dockerfile = build.get("dockerfile")
+            context_path = Path(context)
+            if not context_path.is_absolute():
+                context_path = (project_dir / context_path).resolve()
+            builds.append(BuildSpec(
+                service=name,
+                context=str(context_path),
+                dockerfile=str(dockerfile) if dockerfile else None,
+            ))
         services.append({
             "name": name,
             "image": service.get("image"),
             "container_name": service.get("container_name"),
+            "build": build,
         })
 
     for name, service in services_cfg.items():
