@@ -33,7 +33,6 @@ def discover_compose_projects(root: Path) -> list[Path]:
     found: dict[Path, Path] = {}
     root = root.expanduser().resolve()
     for current, dirs, files in os.walk(root):
-        # Avoid expensive/generated trees.
         dirs[:] = [d for d in dirs if d not in {".git", "node_modules", ".venv", "__pycache__"}]
         names = set(files)
         for candidate in COMPOSE_NAMES:
@@ -133,6 +132,22 @@ def classify_mount(service: str, mount: dict[str, Any], db: DatabaseSpec | None)
                      "unknown persistent mount; conservative default")
 
 
+def _resolve_volume_source(config: dict[str, Any], mount: dict[str, Any]) -> dict[str, Any]:
+    """Replace a Compose volume key with Docker's effective volume name when available."""
+    if str(mount.get("type") or "") != "volume":
+        return mount
+    source = str(mount.get("source") or "")
+    if not source:
+        return mount
+    volume_def = (config.get("volumes") or {}).get(source) or {}
+    effective = volume_def.get("name")
+    if not effective:
+        return mount
+    resolved = dict(mount)
+    resolved["source"] = str(effective)
+    return resolved
+
+
 def plan_project(project_dir: Path) -> ProjectPlan:
     project_dir = project_dir.expanduser().resolve()
     config = resolved_compose(project_dir)
@@ -157,6 +172,7 @@ def plan_project(project_dir: Path) -> ProjectPlan:
     for name, service in services_cfg.items():
         for mount in service.get("volumes") or []:
             if isinstance(mount, dict):
+                mount = _resolve_volume_source(config, mount)
                 mounts.append(classify_mount(name, mount, service_db.get(name)))
 
     warnings: list[str] = []
