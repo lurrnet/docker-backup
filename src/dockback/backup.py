@@ -193,3 +193,27 @@ def prepare_backup(plan: ProjectPlan, staging_root: Path) -> Path:
     latest = staging_root.expanduser().resolve() / plan.name / "LATEST"
     latest.write_text(timestamp + "\n", encoding="utf-8")
     return dest
+
+
+def prune_staging(staging_root: Path, keep: int = 2) -> dict[str, int]:
+    """Keep only the newest N completed snapshots per project."""
+    staging_root = staging_root.expanduser().resolve()
+    removed: dict[str, int] = {}
+    if keep < 1:
+        raise ValueError("keep must be at least 1")
+    if not staging_root.exists():
+        return removed
+
+    for project_dir in sorted(p for p in staging_root.iterdir() if p.is_dir()):
+        snapshots = sorted(
+            [p for p in project_dir.iterdir() if p.is_dir() and p.name[:1].isdigit()],
+            key=lambda p: p.name,
+            reverse=True,
+        )
+        count = 0
+        for old in snapshots[keep:]:
+            shutil.rmtree(old)
+            count += 1
+        if count:
+            removed[project_dir.name] = count
+    return removed
