@@ -48,7 +48,7 @@ NAS-side `pull-backup.sh`:
 - triggers a fresh host-side backup;
 - pulls the staging directory with rsync;
 - atomically replaces the NAS-side `current` directory;
-- optionally creates a local restic snapshot and applies retention.
+- optionally creates a local restic snapshot and applies retention;\n- only after the pull succeeds, asks the host to prune old staging snapshots.
 
 ## Important backup behavior
 
@@ -243,7 +243,7 @@ Example cron entry for 03:00 every night:
 0 3 * * * /volume1/scripts/pull-backup.sh /volume1/scripts/dockback-pull.conf >> /volume1/backups/oci-docker/pull.log 2>&1
 ```
 
-Because the schedule lives on the NAS, the OCI VM never needs credentials for the NAS.
+Because the schedule lives on the NAS, the OCI VM never needs credentials for the NAS. After a successful pull, the NAS calls `dockback prune` on the host and keeps the newest `REMOTE_KEEP_STAGING` snapshots per project (default: 2). If the pull or optional restic step fails, pruning is not run.
 
 ## Optional restic on the NAS
 
