@@ -23,7 +23,8 @@ RESTIC_REPOSITORY="${RESTIC_REPOSITORY:-}"
 RESTIC_PASSWORD_FILE="${RESTIC_PASSWORD_FILE:-}"
 KEEP_DAILY="${KEEP_DAILY:-7}"
 KEEP_WEEKLY="${KEEP_WEEKLY:-4}"
-KEEP_MONTHLY="${KEEP_MONTHLY:-12}"\nREMOTE_KEEP_STAGING="${REMOTE_KEEP_STAGING:-2}"
+KEEP_MONTHLY="${KEEP_MONTHLY:-12}"
+REMOTE_KEEP_STAGING="${REMOTE_KEEP_STAGING:-2}"
 
 SSH_ARGS="-p $SSH_PORT -o BatchMode=yes"
 if [ -n "$SSH_KEY" ]; then
@@ -58,7 +59,6 @@ if [ "$RESTIC_ENABLE" = "true" ]; then
 fi
 
 echo "[dockback-pull] pruning old remote staging after successful pull"
-ssh $SSH_ARGS "$REMOTE" \
-  "dockback --staging '$REMOTE_STAGING' prune --keep '$REMOTE_KEEP_STAGING'"
+ssh $SSH_ARGS "$REMOTE"   "dockback --staging '$REMOTE_STAGING' prune --keep '$REMOTE_KEEP_STAGING'"
 
 echo "[dockback-pull] completed successfully"
