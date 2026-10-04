@@ -31,6 +31,9 @@ def parser() -> argparse.ArgumentParser:
     verify_p = sub.add_parser("verify", help="verify one prepared backup directory")
     verify_p.add_argument("backup_dir")
 
+    prune_p = sub.add_parser("prune", help="prune old host-side staging snapshots")
+    prune_p.add_argument("--keep", type=int, default=2)
+
     return p
 
 
@@ -66,7 +69,10 @@ def main(argv: list[str] | None = None) -> int:
                 ok, problems = verify_backup(dest)
                 if not ok:
                     failures += 1
-                    print(f"{plan.name}: verification failed: {'; '.join(problems)}", file=sys.stderr)
+                    print(
+                        f"{plan.name}: verification failed: {'; '.join(problems)}",
+                        file=sys.stderr,
+                    )
                 else:
                     print(f"{plan.name}: {dest}")
             except Exception as exc:
@@ -82,6 +88,11 @@ def main(argv: list[str] | None = None) -> int:
         for problem in problems:
             print(problem, file=sys.stderr)
         return 1
+
+    if args.command == "prune":
+        removed = prune_staging(staging, keep=args.keep)
+        print(json.dumps(removed, indent=2))
+        return 0
 
     return 2
 
