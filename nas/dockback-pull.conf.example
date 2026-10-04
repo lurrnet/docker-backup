@@ -1,0 +1,22 @@
+# OCI host
+REMOTE_HOST=your-oci-host.example.com
+REMOTE_USER=ubuntu
+SSH_PORT=22
+SSH_KEY=/volume1/homes/backup/.ssh/id_ed25519
+
+# Host-side paths
+REMOTE_ROOT=/home/ubuntu
+REMOTE_STAGING=/home/ubuntu/dockback-staging
+
+# NAS destination
+LOCAL_ROOT=/volume1/backups/oci-docker
+
+# Optional restic layer on the NAS
+RESTIC_ENABLE=false
+RESTIC_REPOSITORY=/volume1/backups/restic/oci-docker
+RESTIC_PASSWORD_FILE=/volume1/homes/backup/.config/restic/password
+
+# Retention when restic is enabled
+KEEP_DAILY=7
+KEEP_WEEKLY=4
+KEEP_MONTHLY=12
