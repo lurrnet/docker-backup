@@ -5,15 +5,18 @@ import json
 import sys
 from pathlib import Path
 
-from .backup import prepare_backup
+from .backup import prepare_backup, verify_backup
 from .discovery import discover_compose_projects, plan_project
 
 
 def parser() -> argparse.ArgumentParser:
     p = argparse.ArgumentParser(prog="dockback")
     p.add_argument("--root", default="/home", help="root to scan for Compose projects")
-    p.add_argument("--staging", default="/var/backups/dockback",
-                   help="staging directory readable by the pull account")
+    p.add_argument(
+        "--staging",
+        default="/var/backups/dockback",
+        help="staging directory readable by the pull account",
+    )
     sub = p.add_subparsers(dest="command", required=True)
 
     sub.add_parser("discover", help="list Compose projects")
@@ -24,6 +27,9 @@ def parser() -> argparse.ArgumentParser:
     backup_p = sub.add_parser("backup", help="prepare backup staging")
     backup_p.add_argument("project_dir", nargs="?")
     backup_p.add_argument("--all", action="store_true")
+
+    verify_p = sub.add_parser("verify", help="verify one prepared backup directory")
+    verify_p.add_argument("backup_dir")
 
     return p
 
@@ -57,11 +63,25 @@ def main(argv: list[str] | None = None) -> int:
             try:
                 plan = plan_project(project)
                 dest = prepare_backup(plan, staging)
-                print(f"{plan.name}: {dest}")
+                ok, problems = verify_backup(dest)
+                if not ok:
+                    failures += 1
+                    print(f"{plan.name}: verification failed: {'; '.join(problems)}", file=sys.stderr)
+                else:
+                    print(f"{plan.name}: {dest}")
             except Exception as exc:
                 failures += 1
                 print(f"{project}: ERROR: {exc}", file=sys.stderr)
         return 1 if failures else 0
+
+    if args.command == "verify":
+        ok, problems = verify_backup(Path(args.backup_dir))
+        if ok:
+            print("OK")
+            return 0
+        for problem in problems:
+            print(problem, file=sys.stderr)
+        return 1
 
     return 2
 
